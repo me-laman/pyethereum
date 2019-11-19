@@ -5,8 +5,9 @@ import rlp
 from ethereum import utils
 from ethereum.utils import to_string
 from ethereum.utils import is_string
+from ethereum.utils import encode_hex
 import copy
-from rlp.utils import decode_hex, encode_hex, ascii_chr, str_to_bytes
+from ethereum.utils import decode_hex, ascii_chr, str_to_bytes
 import sys
 from ethereum.fast_rlp import encode_optimized
 rlp_encode = encode_optimized
@@ -97,6 +98,7 @@ class ProofConstructor():
     def get_mode(self):
         return self.mode[-1]
 
+
 proof = ProofConstructor()
 
 
@@ -167,9 +169,9 @@ def unpack_to_nibbles(bindata):
 
 
 def starts_with(full, part):
-    ''' test whether the items in the part is
+    """ test whether the items in the part is
     the leading items of the full
-    '''
+    """
     if len(full) < len(part):
         return False
     return full[:len(part)] == part
@@ -187,6 +189,7 @@ def is_key_value_type(node_type):
     return node_type in [NODE_TYPE_LEAF,
                          NODE_TYPE_EXTENSION]
 
+
 BLANK_NODE = b''
 BLANK_ROOT = utils.sha3rlp(b'')
 DEATH_ROW_OFFSET = 2**62
@@ -199,11 +202,11 @@ def transient_trie_exception(*args):
 class Trie(object):
 
     def __init__(self, db, root_hash=BLANK_ROOT, transient=False):
-        '''it also present a dictionary like interface
+        """it also present a dictionary like interface
 
         :param db key value database
         :root: blank or trie node in form of [key, value] or [v0,v1..v15,v]
-        '''
+        """
         self.db = db  # Pass in a database object directly
         self.transient = transient
         if self.transient:
@@ -214,11 +217,11 @@ class Trie(object):
         self.journal = []
 
     # def __init__(self, dbfile, root_hash=BLANK_ROOT):
-    #     '''it also present a dictionary like interface
+    #     """it also present a dictionary like interface
 
     #     :param dbfile: key value database
     #     :root: blank or trie node in form of [key, value] or [v0,v1..v15,v]
-    #     '''
+    #     """
     #     if isinstance(dbfile, str):
     #         dbfile = os.path.abspath(dbfile)
     #         self.db = DB(dbfile)
@@ -250,8 +253,8 @@ class Trie(object):
 
     @property
     def root_hash(self):
-        '''always empty or a 32 bytes string
-        '''
+        """always empty or a 32 bytes string
+        """
         return self.get_root_hash()
 
     def get_root_hash(self):
@@ -310,8 +313,8 @@ class Trie(object):
         # return o
 
     def clear(self):
-        ''' clear all tree data
-        '''
+        """ clear all tree data
+        """
         self._delete_child_storage(self.root_node)
         self._delete_node_storage(self.root_node)
         self.root_node = BLANK_NODE
@@ -348,11 +351,11 @@ class Trie(object):
         return o
 
     def _get_node_type(self, node):
-        ''' get node type and content
+        """ get node type and content
 
         :param node: node in form of list, or BLANK_NODE
         :return: node type
-        '''
+        """
         if node == BLANK_NODE:
             return NODE_TYPE_BLANK
 
@@ -532,7 +535,9 @@ class Trie(object):
             if reverse:
                 scan_range.reverse()
             for i in scan_range:
-                o = self._getany(self._decode_to_node(node[i]), path=path + [i])
+                o = self._getany(
+                    self._decode_to_node(
+                        node[i]), path=path + [i])
                 if o:
                     return [i] + o
             return None
@@ -602,9 +607,9 @@ class Trie(object):
         return nibbles_to_bin(o) if o else None
 
     def _delete_node_storage(self, node, is_root=False):
-        '''delete storage
+        """delete storage
         :param node: node in form of list, or BLANK_NODE
-        '''
+        """
         if node == BLANK_NODE:
             return
         # assert isinstance(node, list)
@@ -644,8 +649,8 @@ class Trie(object):
 
     def _normalize_branch_node(self, node):
         # sys.stderr.write('nbn\n')
-        '''node should have only one item changed
-        '''
+        """node should have only one item changed
+        """
         not_blank_items_count = sum(1 for x in range(17) if node[x])
         assert not_blank_items_count >= 1
 
@@ -771,9 +776,9 @@ class Trie(object):
         assert False
 
     def delete(self, key):
-        '''
+        """
         :param key: a string with length of [0, 32]
-        '''
+        """
         if not is_string(key):
             raise Exception("Key must be string")
 
@@ -807,10 +812,10 @@ class Trie(object):
                 self.clear_all(self._decode_to_node(node[i]))
 
     def _get_size(self, node):
-        '''Get counts of (key, value) stored in this and the descendant nodes
+        """Get counts of (key, value) stored in this and the descendant nodes
 
         :param node: node in form of list, or BLANK_NODE
-        '''
+        """
         if node == BLANK_NODE:
             return 0
 
@@ -829,7 +834,7 @@ class Trie(object):
             return sum(sizes)
 
     def _to_dict(self, node):
-        '''convert (key, value) stored in this and the descendant nodes
+        """convert (key, value) stored in this and the descendant nodes
         to dict items.
 
         :param node: node in form of list, or BLANK_NODE
@@ -837,7 +842,7 @@ class Trie(object):
         .. note::
 
             Here key is in full form, rather than key of the individual node
-        '''
+        """
         if node == BLANK_NODE:
             return {}
 
@@ -864,7 +869,11 @@ class Trie(object):
                 sub_dict = self._to_dict(self._decode_to_node(node[i]))
 
                 for sub_key, sub_value in sub_dict.items():
-                    full_key = (str_to_bytes(str(i)) + b'+' + sub_key).strip(b'+')
+                    full_key = (
+                        str_to_bytes(
+                            str(i)) +
+                        b'+' +
+                        sub_key).strip(b'+')
                     res[full_key] = sub_value
 
             if node[16]:
@@ -882,6 +891,53 @@ class Trie(object):
             key = nibbles_to_bin(without_terminator(nibbles))
             res[key] = value
         return res
+
+    def iter_branch(self):
+        for key_str, value in self._iter_branch(self.root_node):
+            if key_str:
+                nibbles = [int(x) for x in key_str.split(b'+')]
+            else:
+                nibbles = []
+            key = nibbles_to_bin(without_terminator(nibbles))
+            yield key, value
+
+    def _iter_branch(self, node):
+        """yield (key, value) stored in this and the descendant nodes
+        :param node: node in form of list, or BLANK_NODE
+
+        .. note::
+            Here key is in full form, rather than key of the individual node
+        """
+        if node == BLANK_NODE:
+            raise StopIteration
+
+        node_type = self._get_node_type(node)
+
+        if is_key_value_type(node_type):
+            nibbles = without_terminator(unpack_to_nibbles(node[0]))
+            key = b'+'.join([to_string(x) for x in nibbles])
+            if node_type == NODE_TYPE_EXTENSION:
+                sub_tree = self._iter_branch(self._decode_to_node(node[1]))
+            else:
+                sub_tree = [(to_string(NIBBLE_TERMINATOR), node[1])]
+
+            # prepend key of this node to the keys of children
+            for sub_key, sub_value in sub_tree:
+                full_key = (key + b'+' + sub_key).strip(b'+')
+                yield (full_key, sub_value)
+
+        elif node_type == NODE_TYPE_BRANCH:
+            for i in range(16):
+                sub_tree = self._iter_branch(self._decode_to_node(node[i]))
+                for sub_key, sub_value in sub_tree:
+                    full_key = (
+                        str_to_bytes(
+                            str(i)) +
+                        b'+' +
+                        sub_key).strip(b'+')
+                    yield (full_key, sub_value)
+            if node[16]:
+                yield (to_string(NIBBLE_TERMINATOR), node[-1])
 
     def get(self, key):
         return self._get(self.root_node, bin_to_nibbles(to_string(key)))
@@ -905,10 +961,10 @@ class Trie(object):
         return self.get(key) != BLANK_NODE
 
     def update(self, key, value):
-        '''
+        """
         :param key: a string
         :value: a string
-        '''
+        """
         if not is_string(key):
             raise Exception("Key must be string")
 
